@@ -1,6 +1,6 @@
 __pycache__
 venv
-.env
+dump.sql
 
 data
 scripts

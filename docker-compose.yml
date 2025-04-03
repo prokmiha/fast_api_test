@@ -1,0 +1,28 @@
+version: '3.3'
+
+services:
+  db:
+    image: mysql:8
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./damp.sql:/docker-entrypoint-initdb.d/damp.sql
+
+  web:
+    build: .
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+
+volumes:
+  mysql_data:
