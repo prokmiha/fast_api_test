@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+sqlalchemy[asyncio]
+aiomysql
+pydantic
+pydantic-settings
+python-dotenv
+openpyxl
+python-jose
+passlib
+python-multipart
+alembic
