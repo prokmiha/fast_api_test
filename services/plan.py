@@ -26,40 +26,35 @@ class PlanService:
         try:
             df = pd.read_excel(BytesIO(file_data))
         except Exception:
-            raise HTTPException(status_code=400, detail="Неможливо прочитати Excel-файл")
+            raise HTTPException(status_code=400, detail="Unable to read the Excel file")
 
         required_columns = {"period", "sum", "name"}
         if not required_columns.issubset(df.columns):
-            raise HTTPException(status_code=400, detail=f"Відсутні обов’язкові колонки: {required_columns - set(df.columns)}")
+            raise HTTPException(status_code=400, detail=f"Missing required columns: {required_columns - set(df.columns)}")
 
         for i, row in df.iterrows():
             try:
                 period = pd.to_datetime(row["period"]).date()
             except Exception:
-                raise HTTPException(status_code=400, detail=f"Error: невірна дата")
+                raise HTTPException(status_code=400, detail="Error: invalid date format")
 
             if period.day != 1:
-                raise HTTPException(status_code=400, detail=f"Error: 'period' має бути першим числом місяця")
-
+                raise HTTPException(status_code=400, detail="Error: 'period' must be the first day of the month")
             if pd.isna(row["sum"]):
-                raise HTTPException(status_code=400, detail=f"Error: поле 'sum' не може бути порожнім")
-
+                raise HTTPException(status_code=400, detail="Error: 'sum' field cannot be empty")
             category_name = str(row["name"]).strip()
             category_id = self.dict_repo.get_category_id_by_name(category_name)
 
             if category_id is None:
-                raise HTTPException(status_code=400, detail=f"Error: категорія '{category_name}' не знайдена")
-
+                raise HTTPException(status_code=400, detail=f"Error: category '{category_name}' not found")
             exists = await self.repo.plan_exists(period, category_id)
             if exists:
-                raise HTTPException(status_code=400, detail=f"План з категорією '{category_name}' за {period.strftime('%m.%Y')} вже існує")
-
+                raise HTTPException(status_code=400, detail=f"A plan with category '{category_name}' for {period.strftime('%m.%Y')} already exists")
             plan = Plan(period=period, total_sum=row["sum"], category_id=category_id)
             await self.repo.add_plan(plan)
 
         await self.session.commit()
-        return {"message": "Дані успішно додано до бази"}
-
+        return {"message": "Data successfully added to the database"}
 
 class PlanPerformance:
     def __init__(self, session: AsyncSession):
@@ -77,8 +72,7 @@ class PlanPerformance:
         plan_out = next((p.total_sum for p in plans if p.category_id == self.TYPE_OUT), 0)
 
         if not plan_in and not plan_out:
-            raise HTTPException(status_code=400, detail="Не задано план на даний період")
-
+            raise HTTPException(status_code=400, detail="No plan found for the specified period")
         completion_in = round((total_in / plan_in) * 100, 2) if plan_in else 0
         completion_out = round((total_out / plan_out) * 100, 2) if plan_out else 0
 
@@ -176,5 +170,5 @@ class YearPerformance:
     def validate_year(self, year_str: str) -> int:
         year = int(year_str)
         if not (1900 <= year <= 2100):
-            raise ValueError("Некоректний рік")
+            raise ValueError("Invalid year format")
         return year
