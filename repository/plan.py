@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, extract, func
 from datetime import date
 
 from db.models import Plan
@@ -21,3 +21,18 @@ class PlanRepository:
         stmt = select(Plan).where(Plan.period == target_period)
         result = await self.session.execute(stmt)
         return result.scalars().all()
+    
+    async def get_yearly_plans(self, year: int):
+        stmt = (
+            select(
+                func.month(Plan.period).label("month"),
+                func.sum(Plan.total_sum).label("plan_sum"),
+                Plan.category_id
+            )
+            .where(extract("year", Plan.period) == year)
+            .group_by(func.month(Plan.period), Plan.category_id)
+            .order_by("month")
+        )
+        result = await self.session.execute(stmt)
+        return result.all()
+
